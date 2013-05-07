@@ -19,6 +19,7 @@ import tornado.auth
 import tornado.escape
 import tornado.ioloop
 import tornado.web
+import os
 import os.path
 import uuid
 
@@ -150,6 +151,7 @@ def main():
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         xsrf_cookies=True,
+        debug=(os.environ.get('DEBUG', 'false') == 'true'),
         )
     app.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
