@@ -85,7 +85,7 @@ class MessageNewHandler(BaseHandler):
     def post(self):
         message = {
             "id": str(uuid.uuid4()),
-            "from": self.current_user["first_name"],
+            "from": self.current_user["username"],
             "body": self.get_argument("body"),
         }
         # to_basestring is necessary for Python 3's json encoder,
@@ -117,17 +117,17 @@ class MessageUpdatesHandler(BaseHandler):
         global_message_buffer.cancel_wait(self.on_new_messages)
 
 
-class AuthLoginHandler(BaseHandler, tornado.auth.GoogleMixin):
+class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
     @tornado.web.asynchronous
-    @gen.coroutine
     def get(self):
-        if self.get_argument("openid.mode", None):
-            user = yield self.get_authenticated_user()
-            self.set_secure_cookie("chatdemo_user",
-                                   tornado.escape.json_encode(user))
-            self.redirect("/")
+        if self.get_argument("oauth_token", None):
+            self.get_authenticated_user(self.async_callback(self._on_auth))
             return
-        self.authenticate_redirect(ax_attrs=["name"])
+        self.authorize_redirect('/auth/login')
+    def _on_auth(self, user):
+        self.set_secure_cookie("chatdemo_user",
+                               tornado.escape.json_encode(user))
+        self.redirect("/")
 
 
 class AuthLogoutHandler(BaseHandler):
@@ -151,6 +151,8 @@ def main():
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         xsrf_cookies=True,
+        twitter_consumer_key=os.environ["TWITTER_CONSUMER_KEY"],
+        twitter_consumer_secret=os.environ["TWITTER_CONSUMER_SECRET"],
         debug=(os.environ.get('DEBUG', 'false') == 'true'),
         )
     app.listen(options.port)
