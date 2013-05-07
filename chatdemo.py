@@ -145,7 +145,7 @@ def main():
             (r"/a/message/new", MessageNewHandler),
             (r"/a/message/updates", MessageUpdatesHandler),
             ],
-        cookie_secret="__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
+        cookie_secret="jnKoyZQW2jCaS4mHjTOFxuWdMZThktvDY2e44QIM8IoLvIYBCA",
         login_url="/auth/login",
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
