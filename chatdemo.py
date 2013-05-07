@@ -146,7 +146,7 @@ def main():
             (r"/a/message/new", MessageNewHandler),
             (r"/a/message/updates", MessageUpdatesHandler),
             ],
-        cookie_secret="jnKoyZQW2jCaS4mHjTOFxuWdMZThktvDY2e44QIM8IoLvIYBCA",
+        cookie_secret=os.environ["COOKIE_SECRET"],
         login_url="/auth/login",
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static"),
