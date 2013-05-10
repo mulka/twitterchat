@@ -57,7 +57,7 @@ def start_stream(key, secret, room='onetimeataparty'):
     }
 
     stream = tweetstream.TweetStream(configuration)
-    stream.fetch("/1/statuses/filter.json?" + urllib.urlencode({'track': '#' + room}), callback=tweetstream_callback)
+    stream.fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': '#' + room}), callback=tweetstream_callback)
 
 
 class MessageBuffer(object):
