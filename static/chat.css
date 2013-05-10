@@ -46,13 +46,16 @@ td {
   margin-top: 0.5em;
 }
 
+#inbox {
+  width: 522px;
+}
+
 #inbox .tweet {
   overflow: hidden;
   border: solid 1px #e8e8e8;
   padding: 10px;
   margin-bottom: 10px;
   clear: left;
-  width: 50%;
 }
 
 #inbox .tweet img {
