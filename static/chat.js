@@ -127,7 +127,9 @@ var updater = {
     showMessage: function(message) {
         var existing = $("#m" + message.id);
         if (existing.length > 0) return;
-        var node = $(message.html);
+        var node = $('<div class="tweet">');
+        node.append($('<img src="' + message.profile_image_url + '" width="48" height="48" />'));
+        node.append(message.html);
         node.hide();
         $("#inbox").append(node);
         node.slideDown();

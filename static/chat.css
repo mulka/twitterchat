@@ -46,8 +46,21 @@ td {
   margin-top: 0.5em;
 }
 
-#inbox .message {
-  padding-top: 0.25em;
+#inbox .tweet {
+  overflow: hidden;
+  border: solid 1px #e8e8e8;
+  padding: 10px;
+  margin-bottom: 10px;
+  clear: left;
+  width: 50%;
+}
+
+#inbox .tweet img {
+  float: left;
+}
+
+#inbox .tweet .message {
+  margin-left: 60px;
 }
 
 #nav {

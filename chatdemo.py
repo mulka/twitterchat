@@ -37,13 +37,14 @@ def tweetstream_callback(tweet):
             "id": str(uuid.uuid4()),
             "from": tweet['user']['screen_name'],
             "body": tweet['text'],
+            "profile_image_url": tweet['user']['profile_image_url']
         }
 
         global_message_buffer.new_messages([message])
 
 stream_started = False
 
-def start_stream(key, secret, room='onetimeataparty'):
+def start_stream(key, secret, room='mothersday'):
     global stream_started
 
     if stream_started:
