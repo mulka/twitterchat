@@ -1,1 +1,1 @@
-<div class="message" id="m{{ message["id"] }}"><b>@{{ message["from"] }}: </b>{% module linkify(message["body"]) %}</div>
+<div class="tweet"><img src="{{ message["profile_image_url"] }}" width="48" height="48" /><div class="message" id="m{{ message["id"] }}"><b>@{{ message["from"] }}: </b>{% module linkify(message["body"]) %}</div></div>
