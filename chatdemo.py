@@ -23,6 +23,7 @@ import os
 import os.path
 import urllib
 import uuid
+from collections import defaultdict
 
 from tornado import gen
 from tornado.options import define, options, parse_command_line
@@ -30,8 +31,9 @@ import tweetstream
 
 define("port", default=8888, help="run on the given port", type=int)
 
+logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 
-def tweetstream_callback(tweet):
+def tweetstream_callback(tweet, screen_name):
     if 'user' in tweet:
         message = {
             "id": str(uuid.uuid4()),
@@ -40,15 +42,28 @@ def tweetstream_callback(tweet):
             "profile_image_url": tweet['user']['profile_image_url']
         }
 
-        global_message_buffer.new_messages([message])
+        for hashtag_info in tweet['entities']['hashtags']:
+            room = hashtag_info['text'].lower()
+            if screen_name in message_buffers and room in message_buffers[screen_name]:
+                message_buffers[screen_name][room].new_messages([message])
 
-stream = None
+# screen_name -> stream
+streams = {}
 
-def start_stream(key, secret, room):
-    global stream
+# screen_name -> rooms
+rooms = defaultdict(list)
 
-    if stream:
-        stream.close()
+def start_stream(screen_name, key, secret, room):
+    global streams
+
+    if room in rooms[screen_name]:
+        return
+
+    rooms[screen_name].append(room)
+
+    logging.info('@' + screen_name + ' joined #' + room)
+    if screen_name in streams:
+        streams[screen_name].close()
 
     configuration = {
         "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
@@ -57,8 +72,8 @@ def start_stream(key, secret, room):
         "twitter_access_token_secret": secret,
     }
 
-    stream = tweetstream.TweetStream(configuration)
-    stream.fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': '#' + room}), callback=tweetstream_callback)
+    streams[screen_name] = tweetstream.TweetStream(configuration)
+    streams[screen_name].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[screen_name]])}), callback=lambda tweet: tweetstream_callback(tweet, screen_name))
 
 
 class MessageBuffer(object):
@@ -83,7 +98,7 @@ class MessageBuffer(object):
         self.waiters.remove(callback)
 
     def new_messages(self, messages):
-        logging.info("Sending new message to %r listeners", len(self.waiters))
+        # logging.info("Sending new message to %r listeners", len(self.waiters))
         for callback in self.waiters:
             try:
                 callback(messages)
@@ -95,9 +110,8 @@ class MessageBuffer(object):
             self.cache = self.cache[-self.cache_size:]
 
 
-# Making this a non-singleton is left as an exercise for the reader.
-global_message_buffer = MessageBuffer()
-
+# screen_name -> room -> MessageBuffer
+message_buffers = defaultdict(lambda: defaultdict(MessageBuffer))
 
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
@@ -109,36 +123,40 @@ class BaseHandler(tornado.web.RequestHandler):
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        self.render("index.html", messages=global_message_buffer.cache)
+        self.render("index.html")
 
 
 class MessageNewHandler(BaseHandler):
     @tornado.web.authenticated
     def post(self):
-        message = {
-            "id": str(uuid.uuid4()),
-            "from": self.current_user["username"],
-            "body": self.get_argument("body"),
-        }
-        # to_basestring is necessary for Python 3's json encoder,
-        # which doesn't accept byte strings.
-        message["html"] = tornado.escape.to_basestring(
-            self.render_string("message.html", message=message))
-        if self.get_argument("next", None):
-            self.redirect(self.get_argument("next"))
-        else:
-            self.write(message)
-        global_message_buffer.new_messages([message])
+        pass
+        # TODO: change this to post to Twitter instead of putting it directly into the message buffer
+        # message = {
+        #     "id": str(uuid.uuid4()),
+        #     "from": self.current_user["username"],
+        #     "body": self.get_argument("body"),
+        # }
+        # # to_basestring is necessary for Python 3's json encoder,
+        # # which doesn't accept byte strings.
+        # message["html"] = tornado.escape.to_basestring(
+        #     self.render_string("message.html", message=message))
+        # if self.get_argument("next", None):
+        #     self.redirect(self.get_argument("next"))
+        # else:
+        #     self.write(message)
+        # # global_message_buffer.new_messages([message])
 
 
 class MessageUpdatesHandler(BaseHandler):
     @tornado.web.authenticated
     @tornado.web.asynchronous
     def post(self, room):
+        self.room = room
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
-        start_stream(user['access_token']['key'], user['access_token']['secret'], room)
-        global_message_buffer.wait_for_messages(self.on_new_messages,
+        self.screen_name = user['screen_name']
+        start_stream(self.screen_name, user['access_token']['key'], user['access_token']['secret'], room)
+        message_buffers[self.screen_name][self.room].wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
     def on_new_messages(self, messages):
@@ -152,7 +170,7 @@ class MessageUpdatesHandler(BaseHandler):
         self.finish(dict(messages=messages))
 
     def on_connection_close(self):
-        global_message_buffer.cancel_wait(self.on_new_messages)
+        message_buffers[self.screen_name][self.room].cancel_wait(self.on_new_messages)
 
 
 class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
@@ -181,8 +199,11 @@ class RoomsHandler(BaseHandler):
             self.redirect("/rooms/" + room.lower())
         else:
             self.redirect("/")
+    @tornado.web.authenticated
     def get(self, room):
-        self.render("room.html", room=room, messages=global_message_buffer.cache)
+        user = self.get_current_user()
+        screen_name = user['screen_name']
+        self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
 
 
 def main():
