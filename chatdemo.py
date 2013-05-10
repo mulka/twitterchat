@@ -21,12 +21,43 @@ import tornado.ioloop
 import tornado.web
 import os
 import os.path
+import urllib
 import uuid
 
 from tornado import gen
 from tornado.options import define, options, parse_command_line
+import tweetstream
 
 define("port", default=8888, help="run on the given port", type=int)
+
+
+def tweetstream_callback(tweet):
+    if 'user' in tweet:
+        message = {
+            "id": str(uuid.uuid4()),
+            "from": tweet['user']['screen_name'],
+            "body": tweet['text'],
+        }
+
+        global_message_buffer.new_messages([message])
+
+stream_started = False
+
+def start_stream(key, secret, room='onetimeataparty'):
+    global stream_started
+
+    if stream_started:
+        return
+    stream_started = True
+    configuration = {
+        "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
+        "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
+        "twitter_access_token": key,
+        "twitter_access_token_secret": secret,
+    }
+
+    stream = tweetstream.TweetStream(configuration)
+    stream.fetch("/1/statuses/filter.json?" + urllib.urlencode({'track': '#' + room}), callback=tweetstream_callback)
 
 
 class MessageBuffer(object):
@@ -104,6 +135,8 @@ class MessageUpdatesHandler(BaseHandler):
     @tornado.web.asynchronous
     def post(self):
         cursor = self.get_argument("cursor", None)
+        user = self.get_current_user()
+        start_stream(user['access_token']['key'], user['access_token']['secret'])
         global_message_buffer.wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
@@ -111,6 +144,10 @@ class MessageUpdatesHandler(BaseHandler):
         # Closed client connection
         if self.request.connection.stream.closed():
             return
+        for message in messages:
+            if 'html' not in message:
+                message['html'] = tornado.escape.to_basestring(
+                                        self.render_string("message.html", message=message))
         self.finish(dict(messages=messages))
 
     def on_connection_close(self):
