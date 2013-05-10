@@ -226,3 +226,6 @@ class TweetStream(object):
         if self._callback:
             self._callback(response)
         self.wait_for_message()
+
+    def close(self):
+        self._twitter_stream.close()

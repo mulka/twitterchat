@@ -42,14 +42,14 @@ def tweetstream_callback(tweet):
 
         global_message_buffer.new_messages([message])
 
-stream_started = False
+stream = None
 
-def start_stream(key, secret, room='mothersday'):
-    global stream_started
+def start_stream(key, secret, room):
+    global stream
 
-    if stream_started:
-        return
-    stream_started = True
+    if stream:
+        stream.close()
+
     configuration = {
         "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
         "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
@@ -134,10 +134,10 @@ class MessageNewHandler(BaseHandler):
 class MessageUpdatesHandler(BaseHandler):
     @tornado.web.authenticated
     @tornado.web.asynchronous
-    def post(self):
+    def post(self, room):
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
-        start_stream(user['access_token']['key'], user['access_token']['secret'])
+        start_stream(user['access_token']['key'], user['access_token']['secret'], room)
         global_message_buffer.wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
@@ -174,6 +174,17 @@ class AuthLogoutHandler(BaseHandler):
         self.write("You are now logged out")
 
 
+class RoomsHandler(BaseHandler):
+    def post(self):
+        room = self.get_argument("room", None)
+        if room is not None:
+            self.redirect("/rooms/" + room.lower())
+        else:
+            self.redirect("/")
+    def get(self, room):
+        self.render("room.html", room=room, messages=global_message_buffer.cache)
+
+
 def main():
     parse_command_line()
     app = tornado.web.Application(
@@ -182,7 +193,9 @@ def main():
             (r"/auth/login", AuthLoginHandler),
             (r"/auth/logout", AuthLogoutHandler),
             (r"/a/message/new", MessageNewHandler),
-            (r"/a/message/updates", MessageUpdatesHandler),
+            (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
+            (r"/rooms", RoomsHandler),
+            (r"/rooms/([a-z0-9_]+)", RoomsHandler),
             ],
         cookie_secret=os.environ["COOKIE_SECRET"],
         login_url="/auth/login",
