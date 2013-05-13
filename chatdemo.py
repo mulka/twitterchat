@@ -33,15 +33,18 @@ define("port", default=8888, help="run on the given port", type=int)
 
 logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 
+def create_message(tweet):
+    message = {
+        "id": str(uuid.uuid4()),
+        "from": tweet['user']['screen_name'],
+        "body": tweet['text'],
+        "profile_image_url": tweet['user']['profile_image_url']
+    }
+    return message
+
 def tweetstream_callback(tweet, screen_name):
     if 'user' in tweet:
-        message = {
-            "id": str(uuid.uuid4()),
-            "from": tweet['user']['screen_name'],
-            "body": tweet['text'],
-            "profile_image_url": tweet['user']['profile_image_url']
-        }
-
+        message = create_message(tweet)
         for hashtag_info in tweet['entities']['hashtags']:
             room = hashtag_info['text'].lower()
             if screen_name in message_buffers and room in message_buffers[screen_name]:
@@ -52,28 +55,6 @@ streams = {}
 
 # screen_name -> rooms
 rooms = defaultdict(list)
-
-def start_stream(screen_name, key, secret, room):
-    global streams
-
-    if room in rooms[screen_name]:
-        return
-
-    rooms[screen_name].append(room)
-
-    logging.info('@' + screen_name + ' joined #' + room)
-    if screen_name in streams:
-        streams[screen_name].close()
-
-    configuration = {
-        "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
-        "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
-        "twitter_access_token": key,
-        "twitter_access_token_secret": secret,
-    }
-
-    streams[screen_name] = tweetstream.TweetStream(configuration)
-    streams[screen_name].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[screen_name]])}), callback=lambda tweet: tweetstream_callback(tweet, screen_name))
 
 
 class MessageBuffer(object):
@@ -119,6 +100,41 @@ class BaseHandler(tornado.web.RequestHandler):
         if not user_json: return None
         return tornado.escape.json_decode(user_json)
 
+class StartStreamMixin(tornado.auth.TwitterMixin):
+    @tornado.gen.coroutine
+    def start_stream(self, screen_name, key, secret, room):
+        global streams
+
+        if room in rooms[screen_name]:
+            return
+
+        rooms[screen_name].append(room)
+
+        logging.info('@' + screen_name + ' joined #' + room)
+        if screen_name in streams:
+            streams[screen_name].close()
+
+        results = yield self.twitter_request(
+            '/search/tweets', access_token=self.current_user["access_token"], 
+            q='#' + room, result_type='recent', count=100
+        )
+        messages = []
+        for tweet in results['statuses']:
+            messages.append(create_message(tweet))
+
+        messages.reverse()
+        message_buffers[screen_name][room].new_messages(messages)
+
+        configuration = {
+            "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
+            "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
+            "twitter_access_token": key,
+            "twitter_access_token_secret": secret,
+        }
+
+        streams[screen_name] = tweetstream.TweetStream(configuration)
+        streams[screen_name].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[screen_name]])}), callback=lambda tweet: tweetstream_callback(tweet, screen_name))
+
 
 class MainHandler(BaseHandler):
     @tornado.web.authenticated
@@ -147,7 +163,7 @@ class MessageNewHandler(BaseHandler):
         # # global_message_buffer.new_messages([message])
 
 
-class MessageUpdatesHandler(BaseHandler):
+class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
     @tornado.web.authenticated
     @tornado.web.asynchronous
     def post(self, room):
@@ -155,7 +171,7 @@ class MessageUpdatesHandler(BaseHandler):
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
         self.screen_name = user['screen_name']
-        start_stream(self.screen_name, user['access_token']['key'], user['access_token']['secret'], room)
+        self.start_stream(self.screen_name, user['access_token']['key'], user['access_token']['secret'], room)
         message_buffers[self.screen_name][self.room].wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
