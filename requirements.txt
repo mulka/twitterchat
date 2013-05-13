@@ -2,5 +2,5 @@ anyjson==0.3.3
 distribute==0.6.34
 httplib2==0.8
 oauth2==1.5.211
-tornado==3.0.1
+-e git://github.com/mulka/tornado.git@9a617cc#egg=tornado
 wsgiref==0.1.2
