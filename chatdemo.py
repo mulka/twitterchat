@@ -181,8 +181,12 @@ class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
             return
         self.authorize_redirect('/auth/login')
     def _on_auth(self, user):
+        user_data = {
+            'screen_name': user['screen_name'],
+            'access_token': user['access_token'],
+        }
         self.set_secure_cookie("chatdemo_user",
-                               tornado.escape.json_encode(user))
+                               tornado.escape.json_encode(user_data))
         self.redirect("/")
 
 
