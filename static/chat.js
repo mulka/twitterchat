@@ -35,13 +35,8 @@ function newMessage(form) {
     var disabled = form.find("input[type=submit]");
     disabled.disable();
     $.postJSON("/a/message/new", message, function(response) {
-        updater.showMessage(response);
-        if (message.id) {
-            form.parent().remove();
-        } else {
-            form.find("input[type=text]").val("").select();
-            disabled.enable();
-        }
+        form.find("input[type=text]").val("").select();
+        disabled.enable();
     });
 }
 

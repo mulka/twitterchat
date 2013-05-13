@@ -142,25 +142,20 @@ class MainHandler(BaseHandler):
         self.render("index.html")
 
 
-class MessageNewHandler(BaseHandler):
+class MessageNewHandler(BaseHandler, tornado.auth.TwitterMixin):
     @tornado.web.authenticated
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def post(self):
-        pass
-        # TODO: change this to post to Twitter instead of putting it directly into the message buffer
-        # message = {
-        #     "id": str(uuid.uuid4()),
-        #     "from": self.current_user["username"],
-        #     "body": self.get_argument("body"),
-        # }
-        # # to_basestring is necessary for Python 3's json encoder,
-        # # which doesn't accept byte strings.
-        # message["html"] = tornado.escape.to_basestring(
-        #     self.render_string("message.html", message=message))
-        # if self.get_argument("next", None):
-        #     self.redirect(self.get_argument("next"))
-        # else:
-        #     self.write(message)
-        # # global_message_buffer.new_messages([message])
+        result = yield self.twitter_request(
+            '/statuses/update', access_token=self.current_user["access_token"], 
+            post_args={'status': self.get_argument("body")}
+        )
+        if self.get_argument("next", None):
+            self.redirect(self.get_argument("next"))
+        else:
+            self.write(result)
+        # global_message_buffer.new_messages([message])
 
 
 class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
@@ -200,6 +195,7 @@ class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
         user_data = {
             'screen_name': user['screen_name'],
             'access_token': user['access_token'],
+            'profile_image_url': user['profile_image_url'],
         }
         self.set_secure_cookie("chatdemo_user",
                                tornado.escape.json_encode(user_data))
