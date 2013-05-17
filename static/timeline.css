@@ -1,0 +1,87 @@
+a:link {
+	color: #707070;
+}
+
+.timeline {
+	border-radius: 5px;
+	border: 1px solid #e8e8e8;
+	width: 520px;
+}
+.tweet {
+	list-style: none;
+	padding: 12px 12px 10px 69px;
+	border: 1px solid #e8e8e8;
+	border-width: 0 0 1px;
+}
+.permalink {
+	text-decoration: none;
+	float: right;
+}
+.header {
+	position: relative;
+}
+.avatar {
+	position: absolute;
+	top: 0;
+	left: -57px;
+	width: 48px;
+	height: 48px;
+	border-radius: 4px;
+}
+.feed {
+	padding: 0;
+	margin: 0;
+}
+.entry-title {
+	margin: 0 5px 0 0;
+}
+.footer {
+	position: relative;
+	min-height: 16px;
+}
+.tweet-actions {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	position: absolute;
+	right: 0;
+	display: block;
+}
+.tweet-actions li {
+	float: left;
+}
+.ic-mask {
+	background: transparent url(/static/sprite.png) no-repeat 0 0;
+	display: inline-block;
+	background-size: 177px 191px;
+	background-color: #000000;
+	vertical-align: middle;
+}
+.ic-reply {
+	width: 19px;
+	height: 15px;
+	background-position: 0 -87px;
+}
+.ic-retweet {
+	width: 22px;
+	height: 15px;
+	background-position: -31px -87px;
+}
+.ic-fav {
+	width: 16px;
+	height: 15px;
+	background-position: -60px -87px;
+}
+
+.timeline-header {
+	padding: 6px 10px;
+	background: #e8e8e8;
+}
+
+.tweet-box-button {
+	background: #fff;
+	display: block;
+	padding: 6px;
+	border: 1px #ccc solid;
+	border-radius: 4px;
+}

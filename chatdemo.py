@@ -1,19 +1,3 @@
-#!/usr/bin/env python
-#
-# Copyright 2009 Facebook
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
-
 import logging
 import tornado.auth
 import tornado.escape
@@ -36,9 +20,7 @@ logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 def create_message(tweet):
     message = {
         "id": str(uuid.uuid4()),
-        "from": tweet['user']['screen_name'],
-        "body": tweet['text'],
-        "profile_image_url": tweet['user']['profile_image_url']
+        "tweet": tweet,
     }
     return message
 
@@ -177,7 +159,7 @@ class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
         for message in messages:
             if 'html' not in message:
                 message['html'] = tornado.escape.to_basestring(
-                                        self.render_string("message.html", message=message))
+                                        self.render_string("tweet.html", tweet=message['tweet']))
         self.finish(dict(messages=messages))
 
     def on_connection_close(self):

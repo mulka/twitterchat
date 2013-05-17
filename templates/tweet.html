@@ -1,0 +1,18 @@
+<li class="tweet">
+	<a href="#" class="permalink"><time title="Time posted: ">{{ datetime.datetime.strftime(datetime.datetime.strptime(tweet['created_at'], '%a %b %d %H:%M:%S +0000 %Y'), '%H:%M') }}<!--37<abbr title="minutes">m</abbr>--></time></a>
+	<div class="header">
+		<a href="https://twitter.com/{{ tweet['user']['screen_name'] }}" class="profile">
+			<img class="avatar" src="{{ tweet['user']['profile_image_url'] }}" width="48" height="48" \>
+			<span class="full-name">{{ tweet['user']['name'] }}</span>
+			<span class="p-nickname">@{{ tweet['user']['screen_name'] }}</span>
+		</a>
+	</div>
+	<div class="entry-content"><p class="entry-title">{% module linkify(tweet['text']) %}</p></div>
+	<div class="footer">
+		<ul class="tweet-actions">
+			<li><a href="https://twitter.com/intent/tweet?in_reply_to={{ tweet['id_str'] }}"><i class="ic-reply ic-mask"></i></a></li>
+			<li><a href="https://twitter.com/intent/retweet?tweet_id={{ tweet['id_str'] }}"><i class="ic-retweet ic-mask"></i></a></li>
+			<li><a href="https://twitter.com/intent/favorite?tweet_id={{ tweet['id_str'] }}"><i class="ic-fav ic-mask"></i></a></li>
+		</ul>
+	</div>
+</li>
