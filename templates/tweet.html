@@ -9,6 +9,7 @@
 	</div>
 	<div class="entry-content"><p class="entry-title">{% module linkify(tweet['text']) %}</p></div>
 	<div class="footer">
+		<a href="https://twitter.com/{{ tweet['user']['screen_name'] }}/status/{{ tweet['id_str'] }}">Details</a>
 		<ul class="tweet-actions">
 			<li><a href="https://twitter.com/intent/tweet?in_reply_to={{ tweet['id_str'] }}"><i class="ic-reply ic-mask"></i></a></li>
 			<li><a href="https://twitter.com/intent/retweet?tweet_id={{ tweet['id_str'] }}"><i class="ic-retweet ic-mask"></i></a></li>
