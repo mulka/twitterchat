@@ -59,8 +59,15 @@ a:hover {
 	background: transparent url(/static/sprite.png) no-repeat 0 0;
 	display: inline-block;
 	background-size: 177px 191px;
-	background-color: #000000;
+	background-color: #000;
 	vertical-align: middle;
+}
+.ic-rt {
+	width: 14px;
+	height: 16px;
+	margin-right: 4px;
+	background-position: -20px -2px;
+	background-color: #fff
 }
 .ic-reply {
 	width: 19px;

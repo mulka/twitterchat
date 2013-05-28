@@ -18,6 +18,10 @@ define("port", default=8888, help="run on the given port", type=int)
 logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 
 def create_message(tweet):
+    if 'retweeted_status' in tweet:
+        user = tweet['user']
+        tweet = tweet['retweeted_status']
+        tweet['retweeted_by'] = user
     message = {
         "id": str(uuid.uuid4()),
         "tweet": tweet,
