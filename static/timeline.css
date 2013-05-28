@@ -1,7 +1,12 @@
 a:link {
 	color: #707070;
 }
-
+a {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration:underline;
+}
 .timeline {
 	border-radius: 5px;
 	border: 1px solid #e8e8e8;
