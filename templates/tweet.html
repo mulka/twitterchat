@@ -8,7 +8,7 @@
 		</a>
 	</span>
 	<div class="entry-content">
-		<p class="entry-title">{% module linkify(tweet['text']) %}</p>
+		<p class="entry-title">{% raw tweet['html'] %}</p>
 		{% if 'retweeted_by' in tweet %}
 		<div class="retweet-credit">
 			<i class="ic-rt ic-mask"></i>Retweeted by <a href="https://twitter.com/{{ tweet['retweeted_by']['screen_name'] }}" class="profile" target="_blank" title="@{{ tweet['retweeted_by']['screen_name'] }} on Twitter">{{ tweet['retweeted_by']['name'] }}</a>

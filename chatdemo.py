@@ -17,11 +17,53 @@ define("port", default=8888, help="run on the given port", type=int)
 
 logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 
+def link_it_up(tweet):
+    html = tweet['text']
+    replacements = []
+    for entity_type, entities in tweet['entities'].iteritems():
+        if entity_type in ['hashtags', 'user_mentions', 'urls', 'media']:
+            for entity in entities:
+                generic_entity = {
+                    'indices': entity['indices']
+                }
+                url = '#'
+                title = ''
+                if entity_type == 'hashtags':
+                    url = 'https://twitter.com/search?q=%23' + entity['text']
+                elif entity_type == 'user_mentions':
+                    url = 'https://twitter.com/' + entity['screen_name']
+                elif entity_type == 'urls' or entity_type == 'media':
+                    url = entity['url']
+                    title = entity['expanded_url']
+                    generic_entity['text'] = entity['display_url']
+
+                generic_entity['before'] = '<a href="' + url + '" target="_blank" title="' + title + '">'
+                generic_entity['after'] = '</a>'
+                replacements.append(generic_entity)
+
+    replacements.sort(key=lambda entity: entity['indices'][0])
+
+    offset = 0
+    for replacement in replacements:
+        old_text = html[replacement['indices'][0] + offset:replacement['indices'][1] + offset]
+        if 'text' in replacement:
+            new_text = replacement['text']
+        else:
+            new_text = old_text
+        html = html[:replacement['indices'][0] + offset] + \
+               replacement['before'] + new_text + replacement['after'] + \
+               html[replacement['indices'][1] + offset:]
+        offset += len(replacement['before']) - len(old_text) + len(new_text) + len(replacement['after'])
+    return html
+
+
 def create_message(tweet):
     if 'retweeted_status' in tweet:
         user = tweet['user']
         tweet = tweet['retweeted_status']
         tweet['retweeted_by'] = user
+
+    tweet['html'] = link_it_up(tweet)
     message = {
         "id": str(uuid.uuid4()),
         "tweet": tweet,
