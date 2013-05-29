@@ -202,6 +202,9 @@ class RoomsHandler(BaseHandler):
             self.redirect("/")
     @tornado.web.authenticated
     def get(self, room):
+        if room != room.lower():
+            self.redirect("/rooms/" + room.lower())
+            return
         user = self.get_current_user()
         screen_name = user['screen_name']
         self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
@@ -217,7 +220,7 @@ def main():
             (r"/a/message/new", MessageNewHandler),
             (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
             (r"/rooms", RoomsHandler),
-            (r"/rooms/([a-z0-9_]+)", RoomsHandler),
+            (r"/rooms/([a-zA-Z0-9_]+)", RoomsHandler),
             ],
         cookie_secret=os.environ["COOKIE_SECRET"],
         login_url="/auth/login",
