@@ -8,6 +8,7 @@ import os.path
 import urllib
 import uuid
 from collections import defaultdict
+import datetime
 
 from tornado import gen
 from tornado.options import define, options, parse_command_line
@@ -90,6 +91,7 @@ class MessageBuffer(object):
         self.waiters = set()
         self.cache = []
         self.cache_size = 200
+        self.timeouts = {}
 
     def wait_for_messages(self, callback, cursor=None):
         if cursor:
@@ -101,14 +103,22 @@ class MessageBuffer(object):
             if new_count:
                 callback(self.cache[-new_count:])
                 return
+        self.timeouts[callback] = tornado.ioloop.IOLoop.current().add_timeout(datetime.timedelta(seconds=20), lambda: self.new_messages([]))
         self.waiters.add(callback)
 
+    def cancel_timeout(self, callback):
+        timeout = self.timeouts[callback]
+        tornado.ioloop.IOLoop.current().remove_timeout(timeout)
+        del self.timeouts[callback]
+
     def cancel_wait(self, callback):
+        self.cancel_timeout(callback)
         self.waiters.remove(callback)
 
     def new_messages(self, messages):
         # logging.info("Sending new message to %r listeners", len(self.waiters))
         for callback in self.waiters:
+            self.cancel_timeout(callback)
             try:
                 callback(messages)
             except:

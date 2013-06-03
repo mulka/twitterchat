@@ -95,7 +95,7 @@ var updater = {
     },
 
     newMessages: function(response) {
-        if (!response.messages) return;
+        if (!response.messages || !response.messages.length) return;
         updater.cursor = response.cursor;
         var messages = response.messages;
         updater.cursor = messages[messages.length - 1].id;
