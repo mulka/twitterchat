@@ -17,6 +17,7 @@ a:hover {
 	padding: 12px 12px 10px 69px;
 	border: 1px solid #e8e8e8;
 	border-width: 0 0 1px;
+	background-color: white;
 }
 .permalink {
 	text-decoration: none;
