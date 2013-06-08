@@ -242,7 +242,8 @@ class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
 class AuthLogoutHandler(BaseHandler):
     def get(self):
         self.clear_cookie("chatdemo_user")
-        self.write("You are now logged out")
+        self.redirect('/')
+        # self.write("You are now logged out")
 
 
 class RoomsHandler(BaseHandler):
