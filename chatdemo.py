@@ -248,7 +248,9 @@ class AuthLogoutHandler(BaseHandler):
 class RoomsHandler(BaseHandler):
     def post(self):
         room = self.get_argument("room", None)
-        if room is not None:
+        if room is not None and len(room) > 0:
+            if room[0] == '#':
+                room = room[1:]
             self.redirect("/rooms/" + room.lower())
         else:
             self.redirect("/")
