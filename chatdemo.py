@@ -223,7 +223,7 @@ class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
         for message in messages:
             if 'html' not in message:
                 message['html'] = tornado.escape.to_basestring(
-                                        self.render_string("tweet.html", tweet=message['tweet']))
+                                        self.render_string("tweet.html", tweet=message['tweet'], room=self.room))
         self.finish(dict(messages=messages))
 
     def on_connection_close(self):

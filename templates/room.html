@@ -25,7 +25,7 @@
         <div class="stream">
           <ol id="feed" class="feed">
             {% for message in reversed(messages) %}
-              {% module Template("tweet.html", tweet=message['tweet']) %}
+              {% module Template("tweet.html", tweet=message['tweet'], room=room) %}
             {% end %}
           </ol>
         </div>
