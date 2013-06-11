@@ -9,8 +9,12 @@
   </head>
   <body>
     <div id="nav">
+      {% if current_user %}
       <b>@{{ current_user["screen_name"] }}</b> -
       <a href="/auth/logout">{{ _("Sign out") }}</a>
+      {% else %}
+      <a href="/auth/login?next={{ request.uri }}">{{ _("Sign in") }}</a>
+      {% end %}
     </div>
     <div id="body">
       <div class="timeline">

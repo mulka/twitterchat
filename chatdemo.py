@@ -140,28 +140,36 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class StartStreamMixin(tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
-    def start_stream(self, screen_name, key, secret, room):
+    def start_stream(self, room, screen_name=None, key=None, secret=None):
         global streams
+
+        if screen_name is None:
+            key = os.environ["TWITTER_ACCESS_TOKEN"]
+            secret = os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
 
         if room in rooms[screen_name]:
             return
 
         rooms[screen_name].append(room)
 
-        logging.info('@' + screen_name + ' joined #' + room)
+        if screen_name:
+            logging.info('@' + screen_name + ' joined #' + room)
+        else:
+            logging.info('someone' + ' joined #' + room)
+
         if screen_name in streams:
             streams[screen_name].close()
 
+
         results = yield self.twitter_request(
-            '/search/tweets', access_token=self.current_user["access_token"], 
+            '/search/tweets', access_token={'key': key, 'secret': secret},
             q='#' + room, result_type='recent', count=100
         )
-        messages = []
-        for tweet in results['statuses']:
-            messages.append(create_message(tweet))
 
-        messages.reverse()
-        message_buffers[screen_name][room].new_messages(messages)
+        if results:
+            messages = [create_message(tweet) for tweet in results['statuses']]
+            messages.reverse()
+            message_buffers[screen_name][room].new_messages(messages)
 
         configuration = {
             "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
@@ -196,14 +204,17 @@ class MessageNewHandler(BaseHandler, tornado.auth.TwitterMixin):
 
 
 class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
-    @tornado.web.authenticated
     @tornado.web.asynchronous
     def post(self, room):
         self.room = room
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
-        self.screen_name = user['screen_name']
-        self.start_stream(self.screen_name, user['access_token']['key'], user['access_token']['secret'], room)
+        if user:
+            self.screen_name = user['screen_name']
+            self.start_stream(room, self.screen_name, user['access_token']['key'], user['access_token']['secret'])
+        else:
+            self.screen_name = None
+            self.start_stream(room)
         message_buffers[self.screen_name][self.room].wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
@@ -256,7 +267,6 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
         else:
             self.redirect("/")
             
-    @tornado.web.authenticated
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self, room):
@@ -264,8 +274,12 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
             self.redirect("/rooms/" + room.lower())
             return
         user = self.get_current_user()
-        screen_name = user['screen_name']
-        yield self.start_stream(screen_name, user['access_token']['key'], user['access_token']['secret'], room)
+        if user:
+            screen_name = user['screen_name']
+            yield self.start_stream(room, screen_name, user['access_token']['key'], user['access_token']['secret'])
+        else:
+            screen_name = None
+            yield self.start_stream(room)
         self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
 
 
