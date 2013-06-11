@@ -246,7 +246,7 @@ class AuthLogoutHandler(BaseHandler):
         # self.write("You are now logged out")
 
 
-class RoomsHandler(BaseHandler):
+class RoomsHandler(BaseHandler, StartStreamMixin):
     def post(self):
         room = self.get_argument("room", None)
         if room is not None and len(room) > 0:
@@ -255,13 +255,17 @@ class RoomsHandler(BaseHandler):
             self.redirect("/rooms/" + room.lower())
         else:
             self.redirect("/")
+            
     @tornado.web.authenticated
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def get(self, room):
         if room != room.lower():
             self.redirect("/rooms/" + room.lower())
             return
         user = self.get_current_user()
         screen_name = user['screen_name']
+        yield self.start_stream(screen_name, user['access_token']['key'], user['access_token']['secret'], room)
         self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
 
 
