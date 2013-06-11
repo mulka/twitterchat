@@ -141,8 +141,6 @@ class BaseHandler(tornado.web.RequestHandler):
 class StartStreamMixin(tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
     def start_stream(self, room, screen_name=None, key=None, secret=None):
-        global streams
-
         if screen_name is None:
             key = os.environ["TWITTER_ACCESS_TOKEN"]
             secret = os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
@@ -278,9 +276,24 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
             screen_name = user['screen_name']
             yield self.start_stream(room, screen_name, user['access_token']['key'], user['access_token']['secret'])
         else:
+            login_url = '/auth/login?next=' + self.request.uri
+            if len(rooms[None]) > 390:
+                self.redirect(login_url)
+                return
+
             screen_name = None
-            yield self.start_stream(room)
+            try:
+                yield self.start_stream(room)
+            except:
+                self.redirect(login_url)
+                return
+
         self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
+
+
+class AdminHandler(BaseHandler):
+    def get(self):
+        self.write(str(len(rooms[None])))
 
 
 def main():
@@ -294,6 +307,7 @@ def main():
             (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
             (r"/rooms", RoomsHandler),
             (r"/rooms/([a-zA-Z0-9_]+)", RoomsHandler),
+            (r"/admin", AdminHandler),
             ],
         cookie_secret=os.environ["COOKIE_SECRET"],
         login_url="/auth/login",
