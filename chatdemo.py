@@ -193,8 +193,11 @@ class MessageNewHandler(BaseHandler, tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
     def post(self):
         result = yield self.twitter_request(
-            '/statuses/update', access_token=self.current_user["access_token"],
-            post_args={'status': self.get_argument("body")}
+            '/statuses/update', access_token=self.current_user["access_token"], 
+            post_args={
+                'status': self.get_argument("body"),
+                'in_reply_to_status_id': self.get_argument('in_reply_to')
+            }
         )
         if self.get_argument("next", None):
             self.redirect(self.get_argument("next"))

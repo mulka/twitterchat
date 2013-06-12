@@ -18,7 +18,9 @@ $(document).ready(function() {
 var tweets = {};
 
 function reply(tweet_id) {
-    var el = $("#chat-form").find("textarea");
+    var form = $("#chat-form");
+    $("#in_reply_to").val(tweet_id);
+    var el = form.find("textarea");
     el.val('@' + tweets[tweet_id]['user']['screen_name'] + ' ' + el.val()).select();
     return false;
 }

@@ -21,6 +21,7 @@
       <form id="chat-form" action="/a/message/new" method="post">
         <textarea id="message" name="body" placeholder="Type your tweet here (#{{ room }} will be added to the end)"></textarea>
         <button type="submit">Tweet</button>
+        <input id="in_reply_to" type="hidden" name="in_reply_to" value="" />
         {% module xsrf_form_html() %}
       </form>
       {% end %}
