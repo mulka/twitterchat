@@ -22,10 +22,25 @@
 	</div>
 	<div class="footer">
 		<ul class="tweet-actions">
-			<li><a href="https://twitter.com/intent/tweet?in_reply_to={{ tweet['id_str'] }}&amp;hashtags={{ room }}" title="Reply"><i class="ic-reply ic-mask"></i></a></li>
-			<li><a href="https://twitter.com/intent/retweet?tweet_id={{ tweet['id_str'] }}" title="Retweet"><i class="ic-retweet ic-mask"></i></a></li>
-			<li><a href="https://twitter.com/intent/tweet?text={{ url_escape('"' + '@' + tweet['user']['screen_name'] + ': ' + tweet['text'] + '"') }}" title="Quote"><img class="ic-quote" src="{{ static_url('img/quotes-icon.png') }}" /></a></li>
-			<li><a href="https://twitter.com/intent/favorite?tweet_id={{ tweet['id_str'] }}" title="Favorite"><i class="ic-fav ic-mask"></i></a></li>
+			<li>
+				<a
+				href="{% if current_user %}#{% else %}https://twitter.com/intent/tweet?in_reply_to={{ tweet['id_str'] }}&amp;hashtags={{ room }}{% end %}"
+				onclick="return reply('{{ tweet['id_str'] }}');"
+				title="Reply">
+					<i class="ic-reply ic-mask"></i>
+				</a>
+			</li>
+			<li>
+				<a href="https://twitter.com/intent/retweet?tweet_id={{ tweet['id_str'] }}" title="Retweet"><i class="ic-retweet ic-mask"></i></a>
+			</li>
+			<li>
+				<a href="{% if current_user %}#{% else %}https://twitter.com/intent/tweet?text={{ url_escape('"' + '@' + tweet['user']['screen_name'] + ': ' + tweet['text'] + '"') }}{% end %}" onclick="return quote('{{ tweet['id_str'] }}');" title="Quote">
+					<img class="ic-quote" src="{{ static_url('img/quotes-icon.png') }}" />
+				</a>
+			</li>
+			<li>
+				<a href="https://twitter.com/intent/favorite?tweet_id={{ tweet['id_str'] }}" title="Favorite"><i class="ic-fav ic-mask"></i></a>
+			</li>
 		</ul>
 	</div>
 </li>

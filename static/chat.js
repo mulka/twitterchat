@@ -15,6 +15,21 @@ $(document).ready(function() {
     updater.poll();
 });
 
+var tweets = {};
+
+function reply(tweet_id) {
+    var el = $("#chat-form").find("textarea");
+    el.val('@' + tweets[tweet_id]['user']['screen_name'] + ' ' + el.val()).select();
+    return false;
+}
+
+function quote(tweet_id) {
+    var el = $("#chat-form").find("textarea");
+    var t = tweets[tweet_id];
+    el.val(el.val() + ' "@' + t['user']['screen_name'] + ': ' + t['text'] + '"').select();
+    return false;
+}
+
 function newMessage(form) {
     var message = form.formToDict();
     message.body += ' #' + room;
@@ -108,6 +123,7 @@ var updater = {
     showMessage: function(message) {
         var existing = $("#m" + message.id);
         if (existing.length > 0) return;
+        tweets[message.tweet.id_str] = message.tweet;
         var node = $(message.html);
         node.hide();
         $("#feed").prepend(node);
