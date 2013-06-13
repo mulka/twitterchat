@@ -1,5 +1,10 @@
 <li class="tweet">
-	<a href="https://twitter.com/{{ tweet['user']['screen_name'] }}/status/{{ tweet['id_str'] }}" class="permalink" target="_blank">{{ datetime.datetime.strftime(datetime.datetime.strptime(tweet['created_at'], '%a %b %d %H:%M:%S +0000 %Y'), '%H:%M') }}</a>
+	<a href="https://twitter.com/{{ tweet['user']['screen_name'] }}/status/{{ tweet['id_str'] }}" class="permalink" target="_blank">
+		{{datetime.datetime.strftime(datetime.datetime.strptime(tweet['created_at'], '%a %b %d %H:%M:%S +0000 %Y'),
+		'%H:%M')
+		}}
+	</a>
+
 	<span class="header">
 		<a href="https://twitter.com/{{ tweet['user']['screen_name'] }}" class="profile" target="_blank">
 			<img class="avatar" src="{{ tweet['user']['profile_image_url'] }}" width="48" height="48" \>
