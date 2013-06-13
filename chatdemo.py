@@ -260,6 +260,8 @@ class AuthLogoutHandler(BaseHandler):
 
 
 class RoomsHandler(BaseHandler, StartStreamMixin):
+    def initialize(self, room=None):
+        self.room = room
     def post(self):
         room = self.get_argument("room", None)
         if room is not None and len(room) > 0:
@@ -271,7 +273,9 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
             
     @tornado.web.asynchronous
     @tornado.gen.coroutine
-    def get(self, room):
+    def get(self, room=None):
+        if room is None:
+            room = self.room
         if room != room.lower():
             self.redirect("/rooms/" + room.lower())
             return
@@ -302,17 +306,27 @@ class AdminHandler(BaseHandler):
 
 def main():
     parse_command_line()
-    app = tornado.web.Application(
-        [
+    handlers = [
+        (r"/auth/login", AuthLoginHandler),
+        (r"/auth/logout", AuthLogoutHandler),
+        (r"/a/message/new", MessageNewHandler),
+        (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
+        (r"/admin", AdminHandler),
+    ]
+
+    room = os.environ.get('ROOM')
+    if room:
+        handlers.extend([
+            (r"/", RoomsHandler, {"room": room}),
+        ])
+    else:
+        handlers.extend([
             (r"/", MainHandler),
-            (r"/auth/login", AuthLoginHandler),
-            (r"/auth/logout", AuthLogoutHandler),
-            (r"/a/message/new", MessageNewHandler),
-            (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
             (r"/rooms", RoomsHandler),
             (r"/rooms/([a-zA-Z0-9_]+)", RoomsHandler),
-            (r"/admin", AdminHandler),
-            ],
+        ])
+
+    app = tornado.web.Application(handlers,
         cookie_secret=os.environ["COOKIE_SECRET"],
         login_url="/auth/login",
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
