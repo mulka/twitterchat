@@ -236,6 +236,10 @@ class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
         if self.get_argument("oauth_token", None):
             self.get_authenticated_user(self.async_callback(self._on_auth))
             return
+        if self.get_argument("denied", None):
+            # TODO: need to change if we ever have pages that absolutely require authentication
+            self.redirect(self.get_argument('next'))
+            return
         self.authorize_redirect('/auth/login?next=' + self.get_argument('next'))
     def _on_auth(self, user):
         user_data = {
