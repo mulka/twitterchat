@@ -71,20 +71,20 @@ def create_message(tweet):
     }
     return message
 
-def tweetstream_callback(tweet, screen_name):
+def tweetstream_callback(tweet, key):
     if 'user' in tweet:
         message = create_message(tweet)
         unique_rooms = set()
         for hashtag_info in tweet['entities']['hashtags']:
             unique_rooms.add(hashtag_info['text'].lower())
         for room in unique_rooms:
-            if screen_name in message_buffers and room in message_buffers[screen_name]:
-                message_buffers[screen_name][room].new_messages([message])
+            if key in message_buffers and room in message_buffers[key]:
+                message_buffers[key][room].new_messages([message])
 
-# screen_name -> stream
+# key -> stream
 streams = {}
 
-# screen_name -> rooms
+# key -> rooms
 rooms = defaultdict(list)
 
 
@@ -131,7 +131,7 @@ class MessageBuffer(object):
             self.cache = self.cache[-self.cache_size:]
 
 
-# screen_name -> room -> MessageBuffer
+# key -> room -> MessageBuffer
 message_buffers = defaultdict(lambda: defaultdict(MessageBuffer))
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -147,18 +147,18 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
             key = os.environ["TWITTER_ACCESS_TOKEN"]
             secret = os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
 
-        if room in rooms[screen_name]:
+        if room in rooms[key]:
             return
 
-        rooms[screen_name].append(room)
+        rooms[key].append(room)
 
         if screen_name:
             logging.info('@' + screen_name + ' joined #' + room)
         else:
             logging.info('someone' + ' joined #' + room)
 
-        if screen_name in streams:
-            streams[screen_name].close()
+        if key in streams:
+            streams[key].close()
 
 
         results = yield self.twitter_request(
@@ -169,7 +169,7 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
         if results:
             messages = [create_message(tweet) for tweet in results['statuses']]
             messages.reverse()
-            message_buffers[screen_name][room].new_messages(messages)
+            message_buffers[key][room].new_messages(messages)
 
         configuration = {
             "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
@@ -178,8 +178,8 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
             "twitter_access_token_secret": secret,
         }
 
-        streams[screen_name] = tweetstream.TweetStream(configuration)
-        streams[screen_name].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[screen_name]])}), callback=lambda tweet: tweetstream_callback(tweet, screen_name))
+        streams[key] = tweetstream.TweetStream(configuration)
+        streams[key].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[key]])}), callback=lambda tweet: tweetstream_callback(tweet, key))
 
 
 class MainHandler(BaseHandler):
@@ -213,12 +213,12 @@ class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
         if user:
-            self.screen_name = user['screen_name']
-            self.start_stream(room, self.screen_name, user['access_token']['key'], user['access_token']['secret'])
+            self.key = user['access_token']['key']
+            self.start_stream(room, user['screen_name'], user['access_token']['key'], user['access_token']['secret'])
         else:
-            self.screen_name = None
+            self.key = os.environ['TWITTER_ACCESS_TOKEN']
             self.start_stream(room)
-        message_buffers[self.screen_name][self.room].wait_for_messages(self.on_new_messages,
+        message_buffers[self.key][self.room].wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
 
     def on_new_messages(self, messages):
@@ -232,7 +232,7 @@ class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
         self.finish(dict(messages=messages))
 
     def on_connection_close(self):
-        message_buffers[self.screen_name][self.room].cancel_wait(self.on_new_messages)
+        message_buffers[self.key][self.room].cancel_wait(self.on_new_messages)
 
 
 class AuthLoginHandler(BaseHandler, tornado.auth.TwitterMixin):
@@ -287,10 +287,13 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
         user = self.get_current_user()
         if user:
             screen_name = user['screen_name']
-            yield self.start_stream(room, screen_name, user['access_token']['key'], user['access_token']['secret'])
+            key = user['access_token']['key']
+            secret = user['access_token']['secret']
+            yield self.start_stream(room, screen_name, key, secret)
         else:
             login_url = '/auth/login?next=' + self.request.uri
-            if len(rooms[None]) > 390:
+            key = os.environ["TWITTER_ACCESS_TOKEN"]
+            if len(rooms[key]) > 390:
                 self.redirect(login_url)
                 return
 
@@ -301,12 +304,13 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
                 self.redirect(login_url)
                 return
 
-        self.render("room.html", room=room, messages=message_buffers[screen_name][room].cache)
+        self.render("room.html", room=room, messages=message_buffers[key][room].cache)
 
 
 class AdminHandler(BaseHandler):
     def get(self):
-        self.write(str(len(rooms[None])))
+        key = os.environ["TWITTER_ACCESS_TOKEN"]
+        self.write(str(len(rooms[key])))
 
 
 def main():
