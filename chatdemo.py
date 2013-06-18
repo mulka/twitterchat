@@ -195,7 +195,7 @@ class MessageNewHandler(BaseHandler, tornado.auth.TwitterMixin):
         result = yield self.twitter_request(
             '/statuses/update', access_token=self.current_user["access_token"], 
             post_args={
-                'status': self.get_argument("body"),
+                'status': tornado.escape.utf8(self.get_argument("body")),
                 'in_reply_to_status_id': self.get_argument('in_reply_to')
             }
         )
