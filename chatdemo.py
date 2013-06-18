@@ -59,6 +59,10 @@ def link_it_up(tweet):
 
 
 def create_message(tweet):
+    if 'user' not in tweet:
+        logging.error("couldn't create message from tweet: " + tornado.escape.json_encode(tweet))
+        return None
+
     if 'retweeted_status' in tweet:
         user = tweet['user']
         tweet = tweet['retweeted_status']
@@ -72,8 +76,8 @@ def create_message(tweet):
     return message
 
 def tweetstream_callback(tweet, key):
-    if 'user' in tweet:
-        message = create_message(tweet)
+    message = create_message(tweet)
+    if message:
         unique_rooms = set()
         for hashtag_info in tweet['entities']['hashtags']:
             unique_rooms.add(hashtag_info['text'].lower())
@@ -167,7 +171,11 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
         )
 
         if results:
-            messages = [create_message(tweet) for tweet in results['statuses']]
+            messages = []
+            for tweet in results['statuses']:
+                message = create_message(tweet)
+                if message:
+                    messages.append(message)
             messages.reverse()
             message_buffers[key][room].new_messages(messages)
 
