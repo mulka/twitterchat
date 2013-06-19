@@ -38,6 +38,7 @@ import socket
 import time
 import oauth2
 import urlparse
+import logging
 
 class MissingConfiguration(Exception):
     """Raised when a configuration value is not found."""
@@ -180,6 +181,9 @@ class TweetStream(object):
 
     def wait_for_message(self):
         """ Throw a read event on the stack. """
+        if self._twitter_stream.closed():
+            logging.error("stream closed by remote host")
+            return
         self._twitter_stream.read_until("\r\n", self.on_result)
 
     def on_result(self, response):
