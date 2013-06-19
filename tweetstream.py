@@ -182,7 +182,7 @@ class TweetStream(object):
     def wait_for_message(self):
         """ Throw a read event on the stack. """
         if self._twitter_stream.closed():
-            logging.error("stream closed by remote host")
+            logging.error("stream closed by remote host: " + self._token.key)
             return
         self._twitter_stream.read_until("\r\n", self.on_result)
 
