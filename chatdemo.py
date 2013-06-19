@@ -287,6 +287,8 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self, room=None):
+        self.set_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+
         if room is None:
             room = self.room
         if room != room.lower():
