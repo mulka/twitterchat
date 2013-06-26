@@ -74,8 +74,10 @@ def create_message(tweet):
 def tweetstream_callback(tweet, screen_name):
     if 'user' in tweet:
         message = create_message(tweet)
+        unique_rooms = set()
         for hashtag_info in tweet['entities']['hashtags']:
-            room = hashtag_info['text'].lower()
+            unique_rooms.add(hashtag_info['text'].lower())
+        for room in unique_rooms:
             if screen_name in message_buffers and room in message_buffers[screen_name]:
                 message_buffers[screen_name][room].new_messages([message])
 
@@ -191,7 +193,7 @@ class MessageNewHandler(BaseHandler, tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
     def post(self):
         result = yield self.twitter_request(
-            '/statuses/update', access_token=self.current_user["access_token"], 
+            '/statuses/update', access_token=self.current_user["access_token"],
             post_args={'status': self.get_argument("body")}
         )
         if self.get_argument("next", None):
@@ -270,7 +272,7 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
             self.redirect("/rooms/" + room.lower())
         else:
             self.redirect("/")
-            
+
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self, room=None):
