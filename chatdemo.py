@@ -323,6 +323,24 @@ class AdminHandler(BaseHandler):
         self.write(str(len(rooms[key])))
 
 
+class AdminMemoryHandler(BaseHandler):
+    def get(self):
+        from sys import getsizeof
+        self.write("storing messages for " + str(len(message_buffers)) + " users<br>")
+        total = 0
+        size_total = 0
+        user_room_list = []
+        for user_key, user_message_buffers in message_buffers.iteritems():
+            total += len(user_message_buffers)
+            for room_key, message_buffer in user_message_buffers.iteritems():
+                size_total += getsizeof(message_buffer)
+                user_room_list.append((user_key, room_key))
+        self.write("total message buffers: " + str(total) + "<br>")
+
+        for user, room in user_room_list:
+            self.write(user.split('-')[0] + " " + room + "<br>")
+
+
 def main():
     parse_command_line()
     handlers = [
@@ -331,6 +349,7 @@ def main():
         (r"/a/message/new", MessageNewHandler),
         (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
         (r"/admin", AdminHandler),
+        (r"/admin/memory", AdminMemoryHandler),
     ]
 
     room = os.environ.get('ROOM')
