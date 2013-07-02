@@ -17,11 +17,20 @@
       {% end %}
     </div>
     <div id="body">
+      {% if current_user %}
+      <form id="chat-form" action="/a/message/new" method="post">
+        <textarea id="message" name="body" placeholder="Type your tweet here (#{{ room }} will be added to the end)"></textarea>
+        <button type="submit">Tweet</button>
+        {% module xsrf_form_html() %}
+      </form>
+      {% end %}
       <div class="timeline">
+        {% if not current_user %}
         <div class="timeline-header">
           <a href="https://twitter.com" class="ic-twitter-badge ic-mask" title="Twitter" target="_blank"></a>
           <a class="tweet-box-button" href="https://twitter.com/intent/tweet?hashtags={{ room }}">Tweet #{{ room }}</a>
         </div>
+        {% end %}
         <div class="stream">
           <ol id="feed" class="feed">
             {% for message in reversed(messages) %}

@@ -10,3 +10,7 @@ body {
   float: right;
   z-index: 99;
 }
+
+#message {
+	width: 450px;
+}

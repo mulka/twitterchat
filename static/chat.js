@@ -1,15 +1,27 @@
 $(document).ready(function() {
     if (!window.console) window.console = {};
     if (!window.console.log) window.console.log = function() {};
+    $(document).on("submit", "#chat-form", function() {
+        newMessage($(this));
+        return false;
+    });
+    $(document).on("keydown", "#chat-form", function(e) {
+        if (e.keyCode == 13) {
+            newMessage($(this));
+            return false;
+        }
+    });
+    $("#message").select();
     updater.poll();
 });
 
 function newMessage(form) {
     var message = form.formToDict();
+    message.body += ' #' + room;
     var disabled = form.find("input[type=submit]");
     disabled.disable();
     $.postJSON("/a/message/new", message, function(response) {
-        form.find("input[type=text]").val("").select();
+        form.find("textarea").val("").select();
         disabled.enable();
     });
 }
