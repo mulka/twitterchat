@@ -175,7 +175,7 @@ def restart_stream(key, secret):
 class StartStreamMixin(tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
     def start_stream(self, room, screen_name=None, key=None, secret=None):
-        if screen_name is None:
+        if key is None:
             key = os.environ["TWITTER_ACCESS_TOKEN"]
             secret = os.environ["TWITTER_ACCESS_TOKEN_SECRET"]
 
@@ -247,11 +247,10 @@ class MessageUpdatesHandler(BaseHandler, StartStreamMixin):
         self.room = room
         cursor = self.get_argument("cursor", None)
         user = self.get_current_user()
+        self.key = os.environ['TWITTER_ACCESS_TOKEN']
         if user:
-            self.key = user['access_token']['key']
-            self.start_stream(room, user['screen_name'], user['access_token']['key'], user['access_token']['secret'])
+            self.start_stream(room, user['screen_name'])
         else:
-            self.key = os.environ['TWITTER_ACCESS_TOKEN']
             self.start_stream(room)
         message_buffers[self.key][self.room].wait_for_messages(self.on_new_messages,
                                                 cursor=cursor)
@@ -322,14 +321,12 @@ class RoomsHandler(BaseHandler, StartStreamMixin):
             self.redirect("/rooms/" + room.lower())
             return
         user = self.get_current_user()
+        key = os.environ["TWITTER_ACCESS_TOKEN"]
         if user:
             screen_name = user['screen_name']
-            key = user['access_token']['key']
-            secret = user['access_token']['secret']
-            yield self.start_stream(room, screen_name, key, secret)
+            yield self.start_stream(room, screen_name)
         else:
             login_url = '/auth/login?next=' + self.request.uri
-            key = os.environ["TWITTER_ACCESS_TOKEN"]
             if len(rooms[key]) > 390:
                 self.redirect(login_url)
                 return
