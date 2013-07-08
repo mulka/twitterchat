@@ -69,6 +69,7 @@ def create_message(tweet):
         tweet['retweeted_by'] = user
 
     tweet['html'] = link_it_up(tweet)
+    tweet['text'] = tornado.escape.xhtml_unescape(tweet['text']) #undoing the escaping Twitter does
     message = {
         "id": str(uuid.uuid4()),
         "tweet": tweet,
