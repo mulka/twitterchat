@@ -8,7 +8,7 @@ import os.path
 import urllib
 import uuid
 from collections import defaultdict
-import datetime
+from datetime import datetime, timedelta
 
 from tornado import gen
 from tornado.options import define, options, parse_command_line
@@ -90,7 +90,7 @@ def tweetstream_callback(tweet, key):
 streams = {}
 
 # key -> rooms
-rooms = defaultdict(list)
+rooms = defaultdict(set)
 
 
 class MessageBuffer(object):
@@ -99,8 +99,10 @@ class MessageBuffer(object):
         self.cache = []
         self.cache_size = 200
         self.timeouts = {}
+        self.last_wait = datetime.now()
 
     def wait_for_messages(self, callback, cursor=None):
+        self.last_wait = datetime.now()
         if cursor:
             new_count = 0
             for msg in reversed(self.cache):
@@ -110,7 +112,7 @@ class MessageBuffer(object):
             if new_count:
                 callback(self.cache[-new_count:])
                 return
-        self.timeouts[callback] = tornado.ioloop.IOLoop.current().add_timeout(datetime.timedelta(seconds=20), lambda: self.new_messages([]))
+        self.timeouts[callback] = tornado.ioloop.IOLoop.current().add_timeout(timedelta(seconds=20), lambda: self.new_messages([]))
         self.waiters.add(callback)
 
     def cancel_timeout(self, callback):
@@ -155,16 +157,11 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
         if room in rooms[key]:
             return
 
-        rooms[key].append(room)
 
         if screen_name:
             logging.info('@' + screen_name + ' joined #' + room)
         else:
             logging.info('someone' + ' joined #' + room)
-
-        if key in streams:
-            streams[key].close()
-
 
         results = yield self.twitter_request(
             '/search/tweets', access_token={'key': key, 'secret': secret},
@@ -179,6 +176,16 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
                     messages.append(message)
             messages.reverse()
             message_buffers[key][room].new_messages(messages)
+
+        if key in streams:
+            streams[key].close()
+
+        for room_to_check in rooms[key].copy(): #need a copy of the set because we are modifying it in this loop
+            if datetime.now() - message_buffers[key][room_to_check].last_wait > timedelta(hours=1):
+                rooms[key].remove(room_to_check)
+                del message_buffers[key][room_to_check]
+
+        rooms[key].add(room)
 
         configuration = {
             "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
