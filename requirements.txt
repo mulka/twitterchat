@@ -1,6 +1,7 @@
 anyjson==0.3.3
 distribute==0.6.34
 httplib2==0.8
+newrelic==1.13.1.31
 oauth2==1.5.211
 tornado==3.0.2
 wsgiref==0.1.2

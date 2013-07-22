@@ -1,1 +1,1 @@
-web: python chatdemo.py --port=$PORT
+web: newrelic-admin run-python chatdemo.py --port=$PORT
