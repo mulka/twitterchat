@@ -11,6 +11,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from tornado import gen
+from tornado.httpclient import AsyncHTTPClient
 from tornado.options import define, options, parse_command_line
 import tweetstream
 
@@ -348,6 +349,15 @@ class AdminMemoryHandler(BaseHandler):
         for user, room in user_room_list:
             self.write(user.split('-')[0] + " " + room + "<br>")
 
+class AdminIpHandler(BaseHandler):
+    @tornado.web.asynchronous
+    def get(self):
+        http_client = AsyncHTTPClient()
+        http_client.fetch("http://ip.appspot.com/", self._on_response)
+
+    def _on_response(self, response):
+        self.write(response.body)
+        self.finish()
 
 def main():
     parse_command_line()
@@ -358,6 +368,7 @@ def main():
         (r"/a/message/updates/([a-z0-9_]+)", MessageUpdatesHandler),
         (r"/admin", AdminHandler),
         (r"/admin/memory", AdminMemoryHandler),
+        (r"/admin/ip", AdminIpHandler),
     ]
 
     room = os.environ.get('ROOM')
