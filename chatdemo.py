@@ -89,6 +89,12 @@ def tweetstream_callback(tweet, key):
 # key -> stream
 streams = {}
 
+# key -> timestamp
+stream_restart_times = {}
+
+# key -> bool
+stream_restart_scheduled = defaultdict(bool)
+
 # key -> rooms
 rooms = defaultdict(set)
 
@@ -147,6 +153,25 @@ class BaseHandler(tornado.web.RequestHandler):
         if not user_json: return None
         return tornado.escape.json_decode(user_json)
 
+def restart_stream(key, secret):
+    stream_restart_scheduled[key] = False
+    
+    if key in streams:
+        streams[key].close()
+
+    configuration = {
+        "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
+        "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
+        "twitter_access_token": key,
+        "twitter_access_token_secret": secret,
+    }
+
+    streams[key] = tweetstream.TweetStream(configuration)
+    streams[key].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[key]])}), callback=lambda tweet: tweetstream_callback(tweet, key))
+
+    stream_restart_times[key] = datetime.now()
+
+
 class StartStreamMixin(tornado.auth.TwitterMixin):
     @tornado.gen.coroutine
     def start_stream(self, room, screen_name=None, key=None, secret=None):
@@ -177,9 +202,6 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
             messages.reverse()
             message_buffers[key][room].new_messages(messages)
 
-        if key in streams:
-            streams[key].close()
-
         for room_to_check in rooms[key].copy(): #need a copy of the set because we are modifying it in this loop
             if datetime.now() - message_buffers[key][room_to_check].last_wait > timedelta(hours=1):
                 rooms[key].remove(room_to_check)
@@ -187,15 +209,12 @@ class StartStreamMixin(tornado.auth.TwitterMixin):
 
         rooms[key].add(room)
 
-        configuration = {
-            "twitter_consumer_key": os.environ["TWITTER_CONSUMER_KEY"],
-            "twitter_consumer_secret": os.environ["TWITTER_CONSUMER_SECRET"],
-            "twitter_access_token": key,
-            "twitter_access_token_secret": secret,
-        }
-
-        streams[key] = tweetstream.TweetStream(configuration)
-        streams[key].fetch("/1.1/statuses/filter.json?" + urllib.urlencode({'track': ','.join(['#' + room for room in rooms[key]])}), callback=lambda tweet: tweetstream_callback(tweet, key))
+        if key in stream_restart_times and datetime.now() - stream_restart_times[key] < timedelta(seconds=5):
+            if not stream_restart_scheduled[key]:
+                tornado.ioloop.IOLoop.current().add_timeout(timedelta(seconds=5), lambda: restart_stream(key, secret))
+                stream_restart_scheduled[key] = True
+        elif not stream_restart_scheduled[key]:
+            restart_stream(key, secret)
 
 
 class MainHandler(BaseHandler):
